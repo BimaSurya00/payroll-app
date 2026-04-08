@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://192.168.10.141:8080/api/v1
+http://192.168.100.114:8080/api/v1
 ```
 
 ## Authentication
@@ -12,7 +12,7 @@ Authorization: Bearer <your_access_token>
 ```
 
 ## Standard Response Format
-
+  
 ### Success Response (Single Data)
 ```json
 {

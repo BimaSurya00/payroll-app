@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:payroll_app/blocs.dart';
+import 'package:payroll_app/cubits.dart';
+import 'package:payroll_app/core/config/app_config.dart';
 import 'package:payroll_app/features/auth/presentation/pages/login_page.dart';
-import 'features/splash/presentation/pages/splash_page.dart';
-import 'features/home/presentation/pages/main_page.dart';
+import 'package:payroll_app/init_dependencies.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
+  FlavorConfig.initialize(flavor: Flavor.dev);
+  await initDependencies();
+  runApp(
+    MultiBlocProvider(providers: [...blocs, ...cubits], child: const MyApp()),
+  );
 }
 
 class MyApp extends StatelessWidget {
