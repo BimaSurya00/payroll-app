@@ -31,6 +31,7 @@ _LoginData _$LoginDataFromJson(Map<String, dynamic> json) => _LoginData(
   accessToken: json['accessToken'] as String?,
   refreshToken: json['refreshToken'] as String?,
   expiresIn: (json['expiresIn'] as num?)?.toInt(),
+  expiresAt: (json['expiresAt'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$LoginDataToJson(_LoginData instance) =>
@@ -39,6 +40,7 @@ Map<String, dynamic> _$LoginDataToJson(_LoginData instance) =>
       'accessToken': instance.accessToken,
       'refreshToken': instance.refreshToken,
       'expiresIn': instance.expiresIn,
+      'expiresAt': instance.expiresAt,
     };
 
 _UserLogin _$UserLoginFromJson(Map<String, dynamic> json) => _UserLogin(

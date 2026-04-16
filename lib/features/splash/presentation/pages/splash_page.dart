@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:payroll_app/features/auth/data/datasources/auth_local_data_source.dart';
+import 'package:payroll_app/features/home/presentation/pages/main_page.dart';
 import '../../../../features/auth/presentation/pages/login_page.dart';
 
 class SplashPage extends StatefulWidget {
@@ -9,11 +12,12 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateMixin {
+class _SplashPageState extends State<SplashPage>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _opacityAnimation;
   late Animation<double> _scaleAnimation;
-  
+
   final String _fullText = 'Payroll App';
   String _displayedText = '';
   Timer? _typingTimer;
@@ -37,29 +41,56 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
     );
 
     // Scale up animation with a subtle "pop" effect
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOutBack,
-      ),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     // Start the animation
     _controller.forward();
-    
+
     // Start typing animation after a small delay
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _startTypingAnimation();
     });
 
-    // Navigate to Login Page after 3.5 seconds (slightly longer for typing)
+    // Check token and navigate after 3.5 seconds
     Timer(const Duration(milliseconds: 3500), () {
+      if (mounted) _checkTokenAndNavigate();
+    });
+  }
+
+  Future<void> _checkTokenAndNavigate() async {
+    try {
+      final authLocalDataSource = context.read<AuthLocalDataSource>();
+
+      final accessToken = await authLocalDataSource.getAccessToken();
+      final refreshToken = await authLocalDataSource.getRefreshToken();
+
+      if (mounted) {
+        // If both tokens exist, go to home
+        if (accessToken != null &&
+            accessToken.isNotEmpty &&
+            refreshToken != null &&
+            refreshToken.isNotEmpty) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const MainPage()),
+          );
+        } else {
+          // No tokens, go to login
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        }
+      }
+    } catch (e) {
+      // On error, go to login
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const LoginPage()),
         );
       }
-    });
+    }
   }
 
   void _startTypingAnimation() {
@@ -88,7 +119,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     // Shared color palette with Login Page (can be extracted to a theme later)
-    const primaryColor = Color(0xFF2563EB); 
+    const primaryColor = Color(0xFF2563EB);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -120,7 +151,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                       const SizedBox(height: 16),
                       // Brand Name with Typing Animation
                       Text(
-                        _displayedText, 
+                        _displayedText,
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -133,7 +164,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                 ),
               ),
             ),
-            
+
             // Footer: Version or Tagline
             Align(
               alignment: Alignment.bottomCenter,

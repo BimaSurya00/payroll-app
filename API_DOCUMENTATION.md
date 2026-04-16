@@ -1,19 +1,23 @@
 # Go-Fiber-Boilerplate API Documentation
 
 ## Base URL
+
 ```
-http://192.168.100.114:8080/api/v1
+http://8.215.33.70:8080/api/v1
 ```
 
 ## Authentication
+
 All endpoints (except public auth endpoints) require a valid Bearer token in the `Authorization` header:
+
 ```
 Authorization: Bearer <your_access_token>
 ```
 
 ## Standard Response Format
-  
+
 ### Success Response (Single Data)
+
 ```json
 {
   "success": true,
@@ -27,6 +31,7 @@ Authorization: Bearer <your_access_token>
 ```
 
 ### Success Response (With Pagination)
+
 ```json
 {
   "success": true,
@@ -52,6 +57,7 @@ Authorization: Bearer <your_access_token>
 ```
 
 ### Error Response
+
 ```json
 {
   "success": false,
@@ -62,6 +68,7 @@ Authorization: Bearer <your_access_token>
 ```
 
 ### Validation Error Response
+
 ```json
 {
   "success": false,
@@ -77,6 +84,7 @@ Authorization: Bearer <your_access_token>
 ```
 
 ## Roles
+
 - **USER**: Regular employee user
 - **ADMIN**: Can manage users, employees, schedules, view all attendances and payrolls
 - **SUPER_USER**: Full access including delete operations
@@ -86,11 +94,13 @@ Authorization: Bearer <your_access_token>
 ## 1. AUTH MODULE
 
 ### 1.1 Register
+
 **Endpoint:** `POST /auth/register`
 
 **Access:** Public
 
 **Request Body:**
+
 ```json
 {
   "name": "John Doe",
@@ -101,12 +111,14 @@ Authorization: Bearer <your_access_token>
 ```
 
 **Field Validation:**
+
 - `name`: Required, string, min 3 characters
 - `email`: Required, valid email format, unique
 - `password`: Required, string, min 6 characters
 - `role`: Required, one of: `USER`, `ADMIN`, `SUPER_USER`
 
 **Success Response (201 Created):**
+
 ```json
 {
   "success": true,
@@ -129,6 +141,7 @@ Authorization: Bearer <your_access_token>
 ```
 
 **Error Response (409 Conflict):**
+
 ```json
 {
   "success": false,
@@ -141,11 +154,13 @@ Authorization: Bearer <your_access_token>
 ---
 
 ### 1.2 Login
+
 **Endpoint:** `POST /auth/login`
 
 **Access:** Public
 
 **Request Body:**
+
 ```json
 {
   "email": "john@example.com",
@@ -154,6 +169,7 @@ Authorization: Bearer <your_access_token>
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -176,6 +192,7 @@ Authorization: Bearer <your_access_token>
 ```
 
 **Error Response (401 Unauthorized):**
+
 ```json
 {
   "success": false,
@@ -188,11 +205,13 @@ Authorization: Bearer <your_access_token>
 ---
 
 ### 1.3 Refresh Token
+
 **Endpoint:** `POST /auth/refresh`
 
 **Access:** Public
 
 **Request Body:**
+
 ```json
 {
   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -200,6 +219,7 @@ Authorization: Bearer <your_access_token>
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -216,11 +236,13 @@ Authorization: Bearer <your_access_token>
 ---
 
 ### 1.4 Logout
+
 **Endpoint:** `POST /auth/logout`
 
 **Access:** Authenticated (All roles)
 
 **Request Body:**
+
 ```json
 {
   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -228,6 +250,7 @@ Authorization: Bearer <your_access_token>
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -240,11 +263,13 @@ Authorization: Bearer <your_access_token>
 ---
 
 ### 1.5 Logout All Devices
+
 **Endpoint:** `POST /auth/logout-all`
 
 **Access:** Authenticated (All roles)
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -259,11 +284,13 @@ Authorization: Bearer <your_access_token>
 ## 2. USER MODULE
 
 ### 2.1 Get Own Profile
+
 **Endpoint:** `GET /users/me`
 
 **Access:** USER, ADMIN, SUPER_USER
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -283,20 +310,24 @@ Authorization: Bearer <your_access_token>
 ---
 
 ### 2.2 Get All Users (Paginated)
+
 **Endpoint:** `GET /users`
 
 **Access:** ADMIN, SUPER_USER
 
 **Query Parameters:**
+
 - `page` (optional, default: 1): Page number
 - `per_page` (optional, default: 10, max: 100): Items per page
 
 **Example Request:**
+
 ```
 GET /users?page=1&per_page=10
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -328,14 +359,17 @@ GET /users?page=1&per_page=10
 ---
 
 ### 2.3 Get User by ID
+
 **Endpoint:** `GET /users/:id`
 
 **Access:** ADMIN, SUPER_USER
 
 **URL Parameters:**
+
 - `id`: User UUID
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -355,11 +389,13 @@ GET /users?page=1&per_page=10
 ---
 
 ### 2.4 Create User
+
 **Endpoint:** `POST /users`
 
 **Access:** ADMIN, SUPER_USER
 
 **Request Body:**
+
 ```json
 {
   "name": "Jane Smith",
@@ -370,6 +406,7 @@ GET /users?page=1&per_page=10
 ```
 
 **Success Response (201 Created):**
+
 ```json
 {
   "success": true,
@@ -389,11 +426,13 @@ GET /users?page=1&per_page=10
 ---
 
 ### 2.5 Update User
+
 **Endpoint:** `PATCH /users/:id`
 
 **Access:** ADMIN, SUPER_USER
 
 **Request Body (all fields optional):**
+
 ```json
 {
   "name": "Jane Updated",
@@ -403,6 +442,7 @@ GET /users?page=1&per_page=10
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -422,11 +462,13 @@ GET /users?page=1&per_page=10
 ---
 
 ### 2.6 Delete User
+
 **Endpoint:** `DELETE /users/:id`
 
 **Access:** SUPER_USER only
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -439,18 +481,22 @@ GET /users?page=1&per_page=10
 ---
 
 ### 2.7 Upload Profile Image
+
 **Endpoint:** `POST /users/:id/profile-image`
 
 **Access:**
+
 - USER: Can upload own profile image only
 - ADMIN, SUPER_USER: Can upload any user's profile image
 
 **Content-Type:** `multipart/form-data`
 
 **Form Data:**
+
 - `image`: Image file (JPG, PNG, max 2MB)
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -465,18 +511,22 @@ GET /users?page=1&per_page=10
 ---
 
 ### 2.8 Update Profile Image
+
 **Endpoint:** `PUT /users/:id/profile-image`
 
 **Access:**
+
 - USER: Can update own profile image only
 - ADMIN, SUPER_USER: Can update any user's profile image
 
 **Content-Type:** `multipart/form-data`
 
 **Form Data:**
+
 - `image`: Image file (JPG, PNG, max 2MB)
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -491,13 +541,16 @@ GET /users?page=1&per_page=10
 ---
 
 ### 2.9 Delete Profile Image
+
 **Endpoint:** `DELETE /users/:id/profile-image`
 
 **Access:**
+
 - USER: Can delete own profile image only
 - ADMIN, SUPER_USER: Can delete any user's profile image
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -512,21 +565,25 @@ GET /users?page=1&per_page=10
 ## 3. EMPLOYEE MODULE
 
 ### 3.1 Get All Employees (Paginated)
+
 **Endpoint:** `GET /employees`
 
 **Access:** ADMIN, SUPER_USER
 
 **Query Parameters:**
+
 - `page` (optional, default: 1): Page number
 - `per_page` (optional, default: 10, max: 100): Items per page
 - `search` (optional): Search by name or email
 
 **Example Request:**
+
 ```
 GET /employees?page=1&per_page=10&search=john
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -563,11 +620,13 @@ GET /employees?page=1&per_page=10&search=john
 ---
 
 ### 3.2 Get Employee by ID
+
 **Endpoint:** `GET /employees/:id`
 
 **Access:** ADMIN, SUPER_USER
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -595,11 +654,13 @@ GET /employees?page=1&per_page=10&search=john
 ---
 
 ### 3.3 Create Employee
+
 **Endpoint:** `POST /employees`
 
 **Access:** ADMIN, SUPER_USER
 
 **Request Body:**
+
 ```json
 {
   "userId": "550e8400-e29b-41d4-a716-446655440000",
@@ -615,6 +676,7 @@ GET /employees?page=1&per_page=10&search=john
 ```
 
 **Field Validation:**
+
 - `userId`: Required, valid UUID (must exist in users table)
 - `phone`: Required, string
 - `address`: Required, string
@@ -626,6 +688,7 @@ GET /employees?page=1&per_page=10&search=john
 - `bankAccountHolder`: Required, string
 
 **Success Response (201 Created):**
+
 ```json
 {
   "success": true,
@@ -653,11 +716,13 @@ GET /employees?page=1&per_page=10&search=john
 ---
 
 ### 3.4 Update Employee
+
 **Endpoint:** `PATCH /employees/:id`
 
 **Access:** ADMIN, SUPER_USER
 
 **Request Body (all fields optional):**
+
 ```json
 {
   "phone": "628987654321",
@@ -671,6 +736,7 @@ GET /employees?page=1&per_page=10&search=john
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -698,11 +764,13 @@ GET /employees?page=1&per_page=10&search=john
 ---
 
 ### 3.5 Delete Employee
+
 **Endpoint:** `DELETE /employees/:id`
 
 **Access:** SUPER_USER only
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -717,20 +785,24 @@ GET /employees?page=1&per_page=10&search=john
 ## 4. SCHEDULE MODULE
 
 ### 4.1 Get All Schedules (Paginated)
+
 **Endpoint:** `GET /schedules`
 
 **Access:** ADMIN, SUPER_USER
 
 **Query Parameters:**
+
 - `page` (optional, default: 1): Page number
 - `per_page` (optional, default: 10, max: 100): Items per page
 
 **Example Request:**
+
 ```
 GET /schedules?page=1&per_page=10
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -765,11 +837,13 @@ GET /schedules?page=1&per_page=10
 ---
 
 ### 4.2 Get Schedule by ID
+
 **Endpoint:** `GET /schedules/:id`
 
 **Access:** ADMIN, SUPER_USER
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -792,11 +866,13 @@ GET /schedules?page=1&per_page=10
 ---
 
 ### 4.3 Create Schedule
+
 **Endpoint:** `POST /schedules`
 
 **Access:** SUPER_USER only
 
 **Request Body:**
+
 ```json
 {
   "name": "Office Hours",
@@ -810,6 +886,7 @@ GET /schedules?page=1&per_page=10
 ```
 
 **Field Validation:**
+
 - `name`: Required, string
 - `timeIn`: Required, time format HH:MM
 - `timeOut`: Required, time format HH:MM
@@ -819,6 +896,7 @@ GET /schedules?page=1&per_page=10
 - `allowedRadiusMeters`: Required, integer > 0
 
 **Success Response (201 Created):**
+
 ```json
 {
   "success": true,
@@ -841,24 +919,27 @@ GET /schedules?page=1&per_page=10
 ---
 
 ### 4.4 Update Schedule
+
 **Endpoint:** `PATCH /schedules/:id`
 
 **Access:** SUPER_USER only
 
 **Request Body (all fields optional):**
+
 ```json
 {
   "name": "Office Hours Updated",
   "timeIn": "08:00",
   "timeOut": "16:00",
   "allowedLateMinutes": 30,
-  "officeLat": -6.2000,
-  "officeLong": 106.8500,
+  "officeLat": -6.2,
+  "officeLong": 106.85,
   "allowedRadiusMeters": 150
 }
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -870,8 +951,8 @@ GET /schedules?page=1&per_page=10
     "timeIn": "08:00",
     "timeOut": "16:00",
     "allowedLateMinutes": 30,
-    "officeLat": -6.2000,
-    "officeLong": 106.8500,
+    "officeLat": -6.2,
+    "officeLong": 106.85,
     "allowedRadiusMeters": 150,
     "createdAt": "2024-01-30T10:00:00Z"
   }
@@ -881,11 +962,13 @@ GET /schedules?page=1&per_page=10
 ---
 
 ### 4.5 Delete Schedule
+
 **Endpoint:** `DELETE /schedules/:id`
 
 **Access:** SUPER_USER only
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -896,6 +979,7 @@ GET /schedules?page=1&per_page=10
 ```
 
 **Error Response (409 Conflict):**
+
 ```json
 {
   "success": false,
@@ -910,11 +994,13 @@ GET /schedules?page=1&per_page=10
 ## 5. ATTENDANCE MODULE
 
 ### 5.1 Clock In
+
 **Endpoint:** `POST /attendance/clock-in`
 
 **Access:** USER only (Admin & Super User forbidden)
 
 **Request Body:**
+
 ```json
 {
   "lat": -6.2088,
@@ -923,10 +1009,12 @@ GET /schedules?page=1&per_page=10
 ```
 
 **Field Validation:**
+
 - `lat`: Required, float (latitude)
 - `long`: Required, float (longitude)
 
 **Success Response (201 Created):**
+
 ```json
 {
   "success": true,
@@ -944,6 +1032,7 @@ GET /schedules?page=1&per_page=10
 ```
 
 **Error Response (403 Forbidden):**
+
 ```json
 {
   "success": false,
@@ -954,6 +1043,7 @@ GET /schedules?page=1&per_page=10
 ```
 
 **Error Response (409 Conflict):**
+
 ```json
 {
   "success": false,
@@ -964,6 +1054,7 @@ GET /schedules?page=1&per_page=10
 ```
 
 **Error Response (400 Bad Request):**
+
 ```json
 {
   "success": false,
@@ -976,11 +1067,13 @@ GET /schedules?page=1&per_page=10
 ---
 
 ### 5.2 Clock Out
+
 **Endpoint:** `POST /attendance/clock-out`
 
 **Access:** USER only (Admin & Super User forbidden)
 
 **Request Body:**
+
 ```json
 {
   "lat": -6.2088,
@@ -989,6 +1082,7 @@ GET /schedules?page=1&per_page=10
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -1005,20 +1099,24 @@ GET /schedules?page=1&per_page=10
 ---
 
 ### 5.3 Get Own History (Paginated)
+
 **Endpoint:** `GET /attendance/history`
 
 **Access:** USER, ADMIN, SUPER_USER
 
 **Query Parameters:**
+
 - `page` (optional, default: 1): Page number
 - `per_page` (optional, default: 10, max: 100): Items per page
 
 **Example Request:**
+
 ```
 GET /attendance/history?page=1&per_page=10
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -1051,11 +1149,13 @@ GET /attendance/history?page=1&per_page=10
 ---
 
 ### 5.4 Get All Attendances (Paginated) - Admin Only
+
 **Endpoint:** `GET /attendance/all`
 
 **Access:** ADMIN, SUPER_USER only
 
 **Query Parameters:**
+
 - `page` (optional, default: 1): Page number
 - `per_page` (optional, default: 10, max: 100): Items per page
 - `employee_id` (optional): Filter by employee UUID
@@ -1065,6 +1165,7 @@ GET /attendance/history?page=1&per_page=10
 - `date_to` (optional): Filter date to (YYYY-MM-DD)
 
 **Example Requests:**
+
 ```
 # Get all attendances
 GET /attendance/all?page=1&per_page=10
@@ -1083,6 +1184,7 @@ GET /attendance/all?employee_id=uuid&status=PRESENT&date_from=2024-01-01
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -1117,11 +1219,13 @@ GET /attendance/all?employee_id=uuid&status=PRESENT&date_from=2024-01-01
 ## 6. PAYROLL MODULE
 
 ### 6.1 Generate Bulk Payroll
+
 **Endpoint:** `POST /payrolls/generate`
 
 **Access:** ADMIN, SUPER_USER
 
 **Request Body:**
+
 ```json
 {
   "periodMonth": 1,
@@ -1130,10 +1234,12 @@ GET /attendance/all?employee_id=uuid&status=PRESENT&date_from=2024-01-01
 ```
 
 **Field Validation:**
+
 - `periodMonth`: Required, integer 1-12
 - `periodYear`: Required, integer 2020-2100
 
 **Success Response (201 Created):**
+
 ```json
 {
   "success": true,
@@ -1151,20 +1257,24 @@ GET /attendance/all?employee_id=uuid&status=PRESENT&date_from=2024-01-01
 ---
 
 ### 6.2 Get All Payrolls (Paginated)
+
 **Endpoint:** `GET /payrolls`
 
 **Access:** ADMIN, SUPER_USER
 
 **Query Parameters:**
+
 - `page` (optional, default: 1): Page number
 - `per_page` (optional, default: 15, max: 100): Items per page
 
 **Example Request:**
+
 ```
 GET /payrolls?page=1&per_page=15
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -1196,11 +1306,13 @@ GET /payrolls?page=1&per_page=15
 ---
 
 ### 6.3 Get Payroll by ID
+
 **Endpoint:** `GET /payrolls/:id`
 
 **Access:** All authenticated users
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -1244,11 +1356,13 @@ GET /payrolls?page=1&per_page=15
 ---
 
 ### 6.4 Update Payroll Status
+
 **Endpoint:** `PATCH /payrolls/:id/status`
 
 **Access:** ADMIN, SUPER_USER
 
 **Request Body:**
+
 ```json
 {
   "status": "APPROVED"
@@ -1256,9 +1370,11 @@ GET /payrolls?page=1&per_page=15
 ```
 
 **Field Validation:**
+
 - `status`: Required, one of: `DRAFT`, `APPROVED`, `PAID`
 
 **Status Transition Rules:**
+
 - `DRAFT` → `APPROVED` ✓
 - `DRAFT` → `DRAFT` ✓
 - `APPROVED` → `PAID` ✓
@@ -1267,6 +1383,7 @@ GET /payrolls?page=1&per_page=15
 - Other transitions: ✗ NOT allowed
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -1279,20 +1396,24 @@ GET /payrolls?page=1&per_page=15
 ---
 
 ### 6.5 Export Payroll to CSV
+
 **Endpoint:** `GET /payrolls/export/csv`
 
 **Access:** ADMIN, SUPER_USER
 
 **Query Parameters:**
+
 - `month` (required): Payroll month (1-12)
 - `year` (required): Payroll year (2020-2100)
 
 **Example Request:**
+
 ```
 GET /payrolls/export/csv?month=1&year=2024
 ```
 
 **Success Response (200 OK):**
+
 ```
 Content-Type: text/csv
 Content-Disposition: attachment; filename=payroll_export_20240130_103045.csv
@@ -1306,39 +1427,43 @@ Mandiri,0987654321,Jane Smith,16200000.00,Payroll 2024-01-01 - Jane Smith
 
 ## Error Codes
 
-| Status Code | Description |
-|-------------|-------------|
-| 200 | Success |
-| 201 | Created |
-| 400 | Bad Request - Invalid input |
-| 401 | Unauthorized - Invalid/missing token |
-| 403 | Forbidden - Insufficient permissions |
-| 404 | Not Found - Resource not found |
-| 409 | Conflict - Resource already exists |
-| 422 | Validation Error - Invalid input data |
-| 500 | Internal Server Error |
+| Status Code | Description                           |
+| ----------- | ------------------------------------- |
+| 200         | Success                               |
+| 201         | Created                               |
+| 400         | Bad Request - Invalid input           |
+| 401         | Unauthorized - Invalid/missing token  |
+| 403         | Forbidden - Insufficient permissions  |
+| 404         | Not Found - Resource not found        |
+| 409         | Conflict - Resource already exists    |
+| 422         | Validation Error - Invalid input data |
+| 500         | Internal Server Error                 |
 
 ---
 
 ## Common Headers
 
 ### Request Headers
+
 ```
 Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
 ### Response Headers
+
 ```
 Content-Type: application/json
 ```
 
 For file upload:
+
 ```
 Content-Type: multipart/form-data
 ```
 
 For CSV download:
+
 ```
 Content-Type: text/csv
 Content-Disposition: attachment; filename=payroll_export_YYYYMMDD_HHMMSS.csv

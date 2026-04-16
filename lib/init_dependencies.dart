@@ -8,7 +8,22 @@ import 'package:payroll_app/features/auth/data/datasources/auth_remote_data_sour
 import 'package:payroll_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:payroll_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:payroll_app/features/auth/domain/usecase/login.dart';
+import 'package:payroll_app/features/auth/domain/usecase/logout.dart';
+import 'package:payroll_app/features/auth/domain/usecase/refresh_token.dart';
 import 'package:payroll_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:payroll_app/features/check_in/data/datasources/attendance_remote_data_source.dart';
+import 'package:payroll_app/features/check_in/data/repositories/attendance_repository_impl.dart';
+import 'package:payroll_app/features/check_in/domain/repositories/attendance_repository.dart';
+import 'package:payroll_app/features/check_in/domain/usecases/clock_in.dart';
+import 'package:payroll_app/features/check_in/domain/usecases/clock_out.dart';
+import 'package:payroll_app/features/check_in/domain/usecases/get_attendance_status.dart';
+import 'package:payroll_app/features/check_in/domain/usecases/get_attendance_history.dart';
+import 'package:payroll_app/features/check_in/presentation/bloc/attendance_bloc.dart';
+import 'package:payroll_app/features/profile/data/datasource/profile_remote_data_source.dart';
+import 'package:payroll_app/features/profile/data/repositories/profile_repository_impl.dart';
+import 'package:payroll_app/features/profile/domain/repositories/profile_repository.dart';
+import 'package:payroll_app/features/profile/domain/usecase/get_profile.dart';
+import 'package:payroll_app/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 part 'init_dependencies.main.dart';

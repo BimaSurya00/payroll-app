@@ -1,13 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 abstract class AuthLocalDataSource {
   Future<void> saveAccessToken(String token);
   Future<void> saveRefreshToken(String token);
   Future<void> saveRole(String role);
+  // ✅ Updated: Support both duration and timestamp
+  Future<void> saveTokenExpiry(int expiresIn);
+  Future<void> saveTokenExpiryFromTimestamp(
+    int expiresAt,
+  ); // ← Add: For Unix timestamp
 
   Future<String?> getAccessToken();
   Future<String?> getRefreshToken();
   Future<String?> getRole();
+  Future<int?> getTokenExpiry();
+  Future<bool> isTokenExpired();
 
   Future<void> updateAccessToken(String token);
   Future<void> updateRefreshToken(String token);
@@ -23,6 +31,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   static const String _accessTokenKey = 'accessToken';
   static const String _refreshTokenKey = 'refreshToken';
   static const String _roleKey = 'role';
+  static const String _tokenExpiryKey = 'tokenExpiry'; // New: expiry timestamp
 
   @override
   Future<void> saveAccessToken(String token) async {
@@ -69,6 +78,89 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     await sharedPreferences.remove(_accessTokenKey);
     await sharedPreferences.remove(_refreshTokenKey);
     await sharedPreferences.remove(_roleKey);
+    await sharedPreferences.remove(_tokenExpiryKey);
     return 0;
+  }
+
+  // ✅ New methods for token expiry management
+  @override
+  Future<void> saveTokenExpiry(int expiresIn) async {
+    // expiresIn is in seconds, convert to milliseconds and store as timestamp
+    final expiryTime =
+        DateTime.now().millisecondsSinceEpoch + (expiresIn * 1000);
+    await sharedPreferences.setInt(_tokenExpiryKey, expiryTime);
+  }
+
+  // ✅ New: Save expiry from Unix timestamp (from backend expiresAt)
+  @override
+  Future<void> saveTokenExpiryFromTimestamp(int expiresAt) async {
+    // expiresAt is Unix timestamp in seconds, convert to milliseconds
+    final expiryTime = expiresAt * 1000;
+
+    debugPrint('💾 Saving token expiry from timestamp:');
+    debugPrint('   expiresAt (seconds): $expiresAt');
+    debugPrint('   expiryTime (ms): $expiryTime');
+    debugPrint(
+      '   expiryTime datetime: ${DateTime.fromMillisecondsSinceEpoch(expiryTime)}',
+    );
+    debugPrint('   Current time: ${DateTime.now()}');
+
+    final durationMs = expiryTime - DateTime.now().millisecondsSinceEpoch;
+    debugPrint(
+      '   Duration until expiry: ${(durationMs / 1000).toStringAsFixed(0)}s = ${(durationMs / 60000).toStringAsFixed(2)}min',
+    );
+
+    await sharedPreferences.setInt(_tokenExpiryKey, expiryTime);
+  }
+
+  @override
+  Future<int?> getTokenExpiry() async {
+    return sharedPreferences.getInt(_tokenExpiryKey);
+  }
+
+  @override
+  Future<bool> isTokenExpired() async {
+    final expiry = await getTokenExpiry();
+    if (expiry == null) {
+      debugPrint(
+        '⚠️ TOKEN EXPIRY NULL - returning false to skip proactive refresh',
+      );
+      return false; // ✅ FIX: Return false instead of true to avoid unnecessary refresh
+    }
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final timeUntilExpiry = expiry - now;
+    final minutesLeft = timeUntilExpiry / 60000;
+
+    debugPrint('🕐 Token expiry check:');
+    debugPrint(
+      '   Current time: $now ms (${DateTime.fromMillisecondsSinceEpoch(now)})',
+    );
+    debugPrint(
+      '   Expiry time: $expiry ms (${DateTime.fromMillisecondsSinceEpoch(expiry)})',
+    );
+    debugPrint(
+      '   Time until expiry: ${(timeUntilExpiry / 1000).toStringAsFixed(0)}s = ${minutesLeft.toStringAsFixed(2)}min',
+    );
+
+    // SAFETY CHECK: If token duration is unusually short (<5 min),
+    // might indicate server time sync issue - skip proactive refresh
+    if (minutesLeft < 5) {
+      debugPrint(
+        '   ⚠️ SAFETY: Token duration very short - might be server sync issue',
+      );
+      debugPrint(
+        '   Skipping proactive refresh, will use reactive 401 instead',
+      );
+      return false;
+    }
+
+    // Normal case: trigger proactive refresh only if <1 minute left
+    final shouldRefresh = minutesLeft < 1.0;
+    debugPrint(
+      '   Result: shouldRefresh = $shouldRefresh (minutesLeft=$minutesLeft)',
+    );
+
+    return shouldRefresh;
   }
 }

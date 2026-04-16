@@ -5,6 +5,7 @@ final _dio = Dio(BaseOptions(connectTimeout: Duration(seconds: 15)));
 
 Future<void> initDependencies() async {
   _initAuth();
+  _initAttendance();
 
   final sharedPreferences = await SharedPreferences.getInstance();
 
@@ -27,9 +28,9 @@ void _initAuth() {
     ..registerFactory<AuthLocalDataSource>(
       () => AuthLocalDataSourceImpl(sharedPreferences: serviceLocator()),
     )
-    // ..registerFactory<ProfileRemoteDatasource>(
-    //   () => ProfileRemoteDatasourceImpl(),
-    // )
+    ..registerFactory<ProfileRemoteDataSource>(
+      () => ProfileRemoteDataSourceImpl(),
+    )
     ..registerFactory<AuthRepository>(
       () => AuthRepositoryImpl(
         remoteDatasource: serviceLocator(),
@@ -37,18 +38,17 @@ void _initAuth() {
         connectionChecker: serviceLocator(),
       ),
     )
-    // ..registerFactory<ProfileRepository>(
-    //   () => ProfileRepositoryImpl(
-    //     authLocalDataSource: serviceLocator(),
-    //     remoteDatasource: serviceLocator(),
-    //     connectionChecker: serviceLocator(),
-    //   ),
-    // )
+    ..registerFactory<ProfileRepository>(
+      () => ProfileRepositoryImpl(
+        authLocalDataSource: serviceLocator(),
+        connectionChecker: serviceLocator(),
+        profileRemoteDataSource: serviceLocator(),
+      ),
+    )
     ..registerFactory<Login>(() => Login(serviceLocator()))
-    // ..registerFactory<Register>(() => Register(serviceLocator()))
-    // ..registerFactory<Logout>(() => Logout(serviceLocator()))
-    // ..registerFactory<SendOtp>(() => SendOtp(serviceLocator()))
-    // ..registerFactory<RefreshToken>(() => RefreshToken(serviceLocator()))
+    ..registerFactory<AuthLogout>(() => AuthLogout(serviceLocator()))
+    ..registerFactory<RefreshToken>(() => RefreshToken(serviceLocator()))
+    ..registerFactory<GetProfile>(() => GetProfile(serviceLocator()))
     // ..registerFactory<VerifOtp>(() => VerifOtp(serviceLocator()))
     // ..registerFactory<ResetPassword>(() => ResetPassword(serviceLocator()))
     // ..registerFactory<GetProfile>(() => GetProfile(serviceLocator()))
@@ -80,11 +80,47 @@ void _initAuth() {
       () => AuthBloc(
         // register: serviceLocator(),
         login: serviceLocator(),
-        // sendOtp: serviceLocator(), 
+        authLogout: serviceLocator(),
+        refreshToken: serviceLocator(),
+        // sendOtp: serviceLocator(),
         // verifOtp: serviceLocator(),
         // resetPassword: serviceLocator(),
-        // refreshToken: serviceLocator(),
         authLocalDataSource: serviceLocator(),
+      ),
+    )
+    ..registerLazySingleton(
+      () => ProfileBloc(
+        getProfile: serviceLocator(),
+        authLocalDataSource: serviceLocator(),
+      ),
+    );
+}
+
+void _initAttendance() {
+  serviceLocator
+    ..registerFactory<AttendanceRemoteDataSource>(
+      () => AttendanceRemoteDataSourceImpl(),
+    )
+    ..registerFactory<AttendanceRepository>(
+      () => AttendanceRepositoryImpl(
+        remoteDataSource: serviceLocator(),
+        connectionChecker: serviceLocator(),
+      ),
+    )
+    ..registerFactory<ClockIn>(() => ClockIn(serviceLocator()))
+    ..registerFactory<ClockOut>(() => ClockOut(serviceLocator()))
+    ..registerFactory<GetAttendanceStatus>(
+      () => GetAttendanceStatus(serviceLocator()),
+    )
+    ..registerFactory<GetAttendanceHistory>(
+      () => GetAttendanceHistory(serviceLocator()),
+    )
+    ..registerLazySingleton(
+      () => AttendanceBloc(
+        clockIn: serviceLocator(),
+        clockOut: serviceLocator(),
+        getAttendanceStatus: serviceLocator(),
+        getAttendanceHistory: serviceLocator(),
       ),
     );
 }

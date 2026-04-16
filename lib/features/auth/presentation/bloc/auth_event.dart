@@ -1,5 +1,8 @@
 part of 'auth_bloc.dart';
 
+// ✅ Logout reason enum
+enum LogoutReason { manual, tokenExpired }
+
 @immutable
 sealed class AuthEvent {}
 
@@ -41,3 +44,9 @@ final class OnResetPassword extends AuthEvent {
 }
 
 final class OnRefreshToken extends AuthEvent {}
+
+final class OnAuthLogout extends AuthEvent {
+  final LogoutReason reason;
+
+  OnAuthLogout(this.reason); // ✅ Optional reason parameter
+}

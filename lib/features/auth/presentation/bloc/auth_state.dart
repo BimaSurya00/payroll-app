@@ -98,3 +98,19 @@ final class RefreshTokenFailure extends AuthState {
   final String message;
   RefreshTokenFailure(this.message);
 }
+
+// Auth Logout
+
+final class AuthLogoutLoading extends AuthState {}
+
+final class AuthLogoutSuccess extends AuthState {
+  final String message;
+
+  AuthLogoutSuccess(this.message);
+}
+
+final class AuthLogoutFailure extends AuthState {
+  final String message;
+
+  AuthLogoutFailure(this.message);
+}

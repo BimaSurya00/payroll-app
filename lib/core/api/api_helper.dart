@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:chucker_flutter/chucker_flutter.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -38,75 +39,101 @@ class ApiHelper {
     final List<Interceptor> interceptors = [];
 
     // ✅ Main interceptor: inject token + auto refresh on 401
-    interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        try {
-          final accessToken = await _authLocalDataSource.getAccessToken();
-          if (accessToken != null && accessToken.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $accessToken';
-          }
-        } catch (_) {
-          // Ignore error, proceed without token
-        }
-        return handler.next(options);
-      },
-      onError: (err, handler) async {
-        // Only handle 401 Unauthorized
-        if (err.response?.statusCode == 401) {
-          // Prevent infinite loop with retry flag
-          final retried = err.requestOptions.extra['retried'] == true;
-          if (retried) {
-            return handler.next(err);
-          }
-
+    interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
           try {
-            // ✅ Perform refresh and get new access token directly
-            final newAccess = await _performRefreshIfNeeded();
-
-            if (newAccess == null || newAccess.isEmpty) {
-              // ✅ Trigger logout callback jika refresh gagal
-              onUnauthorized?.call();
+            // ✅ Check if token will expire soon (proactive refresh)
+            final isExpired = await _authLocalDataSource.isTokenExpired();
+            if (isExpired) {
+              debugPrint(
+                '⏱️ Token status: EXPIRED/EXPIRING - attempting proactive refresh',
+              );
+              final newToken = await _performRefreshIfNeeded();
+              if (newToken != null && newToken.isNotEmpty) {
+                debugPrint(
+                  '✅ Proactive refresh succeeded - proceeding with new token',
+                );
+                options.headers['Authorization'] = 'Bearer $newToken';
+              } else {
+                // Refresh gagal, trigger logout
+                debugPrint('❌ Proactive refresh failed - triggering logout');
+                onUnauthorized?.call();
+              }
+            } else {
+              // Token still valid, use existing token
+              debugPrint('✅ Token status: VALID - using existing token');
+              final accessToken = await _authLocalDataSource.getAccessToken();
+              if (accessToken != null && accessToken.isNotEmpty) {
+                options.headers['Authorization'] = 'Bearer $accessToken';
+              }
+            }
+          } catch (e) {
+            debugPrint('❌ Error in onRequest interceptor: $e');
+            // Proceed without token if error
+          }
+          return handler.next(options);
+        },
+        onError: (err, handler) async {
+          // Only handle 401 Unauthorized
+          if (err.response?.statusCode == 401) {
+            // Prevent infinite loop with retry flag
+            final retried = err.requestOptions.extra['retried'] == true;
+            if (retried) {
               return handler.next(err);
             }
 
-            // Mark request as retried
-            err.requestOptions.extra['retried'] = true;
+            try {
+              // ✅ Perform refresh and get new access token directly
+              final newAccess = await _performRefreshIfNeeded();
 
-            // Retry original request with new token
-            final response = await _dio.request<dynamic>(
-              err.requestOptions.path,
-              data: err.requestOptions.data,
-              queryParameters: err.requestOptions.queryParameters,
-              options: Options(
-                method: err.requestOptions.method,
-                headers: {
-                  ...err.requestOptions.headers,
-                  'Authorization': 'Bearer $newAccess',
-                },
-              ),
-            );
+              if (newAccess == null || newAccess.isEmpty) {
+                // ✅ Trigger logout callback jika refresh gagal
+                onUnauthorized?.call();
+                return handler.next(err);
+              }
 
-            return handler.resolve(response);
-          } catch (e) {
-            debugPrint('❌ Error during token refresh retry: $e');
-            return handler.next(err);
+              // Mark request as retried
+              err.requestOptions.extra['retried'] = true;
+
+              // Retry original request with new token
+              final response = await _dio.request<dynamic>(
+                err.requestOptions.path,
+                data: err.requestOptions.data,
+                queryParameters: err.requestOptions.queryParameters,
+                options: Options(
+                  method: err.requestOptions.method,
+                  headers: {
+                    ...err.requestOptions.headers,
+                    'Authorization': 'Bearer $newAccess',
+                  },
+                ),
+              );
+
+              return handler.resolve(response);
+            } catch (e) {
+              debugPrint('❌ Error during token refresh retry: $e');
+              return handler.next(err);
+            }
           }
-        }
 
-        return handler.next(err);
-      },
-    ));
+          return handler.next(err);
+        },
+      ),
+    );
 
     // Dev-only interceptors
     if (FlavorConfig.instance.flavor == Flavor.dev) {
       interceptors.add(ChuckerDioInterceptor());
-      interceptors.add(LogInterceptor(
-        request: true,
-        requestBody: true,
-        responseBody: true,
-        error: true,
-        logPrint: (object) => debugPrint(object.toString()),
-      ));
+      interceptors.add(
+        LogInterceptor(
+          request: true,
+          requestBody: true,
+          responseBody: true,
+          error: true,
+          logPrint: (object) => debugPrint(object.toString()),
+        ),
+      );
     }
 
     return interceptors;
@@ -125,8 +152,9 @@ class ApiHelper {
   }) async {
     final options = Options(
       headers: {
-        'Content-Type':
-            isMultipart ? 'multipart/form-data' : 'application/json',
+        'Content-Type': isMultipart
+            ? 'multipart/form-data'
+            : 'application/json',
       },
     );
 
@@ -254,35 +282,21 @@ class ApiHelper {
 
       debugPrint('🔄 Refreshing access token...');
 
-      // Call refresh endpoint
-      final response = await _dio.post(
-        'https://gapps.siwagen.net/api/v1/auth/refresh',
-        data: {'refreshToken': refreshToken},
-        options: Options(
-          headers: {'Content-Type': 'application/json'},
-        ),
-      );
+      // ✅ Use the public refreshAccessToken method which handles UserID extraction
+      final result = await refreshAccessToken(refreshToken);
 
-      // Parse response based on your API structure
-      final respData = response.data;
-      final tokenContainer = respData is Map && respData['data'] != null
-          ? respData['data']
-          : respData;
-
-      final newAccess = tokenContainer['accessToken'] as String?;
-      final newRefresh = tokenContainer['refreshToken'] as String?;
-
-      if (newAccess == null || newAccess.isEmpty) {
-        debugPrint('❌ Refresh failed: no access token in response');
+      if (result == null) {
+        debugPrint('❌ Refresh failed: no result from refreshAccessToken');
         _refreshCompleter!.complete(null);
         return null;
       }
 
-      // Save new tokens
-      await _authLocalDataSource.updateAccessToken(newAccess);
+      final newAccess = result['accessToken'] as String?;
 
-      if (newRefresh != null && newRefresh.isNotEmpty) {
-        await _authLocalDataSource.updateRefreshToken(newRefresh);
+      if (newAccess == null || newAccess.isEmpty) {
+        debugPrint('❌ Refresh failed: no access token in result');
+        _refreshCompleter!.complete(null);
+        return null;
       }
 
       debugPrint('✅ Token refreshed successfully');
@@ -309,5 +323,89 @@ class ApiHelper {
   static Future<void> removeToken() async {
     await _authLocalDataSource.deleteAll();
     debugPrint('✅ All tokens cleared');
+  }
+
+  /// ✅ Public method for refreshing token (handles UserID extraction)
+  static Future<Map<String, dynamic>?> refreshAccessToken(
+    String refreshToken,
+  ) async {
+    try {
+      // Extract user_id from current access token for UserID field
+      final currentToken = await _authLocalDataSource.getAccessToken();
+      String userId = '';
+      if (currentToken != null && currentToken.isNotEmpty) {
+        try {
+          // Simple JWT decode (without verification for getting user_id)
+          final parts = currentToken.split('.');
+          if (parts.length == 3) {
+            final payload = parts[1];
+            // Normalize base64 string
+            String normalized = payload;
+            while (normalized.length % 4 != 0) {
+              normalized += '=';
+            }
+            // Decode base64
+            final decoded = String.fromCharCodes(
+              const Base64Decoder().convert(normalized),
+            );
+            final Map<String, dynamic> jwtData = jsonDecode(decoded);
+            userId = jwtData['user_id'] ?? '';
+            debugPrint('✅ Extracted user_id from JWT: $userId');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Failed to decode JWT for user_id: $e');
+        }
+      }
+
+      // Call refresh endpoint
+      final response = await _dio.post(
+        'http://8.215.33.70:8080/api/v1/auth/refresh',
+        data: {
+          'refreshToken': refreshToken,
+          if (userId.isNotEmpty) 'UserID': userId, // ✅ Add UserID if available
+        },
+        options: Options(headers: {'Content-Type': 'application/json'}),
+      );
+
+      final respData = response.data;
+      final tokenContainer = respData is Map && respData['data'] != null
+          ? respData['data']
+          : respData;
+
+      final newAccess = tokenContainer['accessToken'] as String?;
+      final newRefresh = tokenContainer['refreshToken'] as String?;
+      final expiresIn = tokenContainer['expiresIn'] as int?;
+
+      if (newAccess == null || newAccess.isEmpty) {
+        debugPrint('❌ Refresh failed: no access token in response');
+        return null;
+      }
+
+      // Save new tokens
+      await _authLocalDataSource.updateAccessToken(newAccess);
+
+      if (newRefresh != null && newRefresh.isNotEmpty) {
+        await _authLocalDataSource.updateRefreshToken(newRefresh);
+      }
+
+      // ✅ FIX: Save token expiry from expiresIn (backend only returns expiresIn)
+      if (expiresIn != null && expiresIn > 0) {
+        await _authLocalDataSource.saveTokenExpiry(expiresIn);
+        debugPrint(
+          '✅ Token expiry updated: ${expiresIn}s (${(expiresIn / 60).toStringAsFixed(1)} minutes)',
+        );
+      }
+
+      debugPrint('✅ Token refreshed successfully');
+
+      return {
+        'accessToken': newAccess,
+        'refreshToken': newRefresh,
+        'expiresIn': expiresIn,
+      };
+    } catch (e) {
+      debugPrint('❌ Refresh token failed: $e');
+      return null;
+    }
   }
 }

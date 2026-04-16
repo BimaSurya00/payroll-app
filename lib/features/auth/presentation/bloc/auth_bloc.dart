@@ -5,43 +5,42 @@ import 'package:payroll_app/features/auth/data/datasources/auth_local_data_sourc
 import 'package:payroll_app/features/auth/data/models/login_request.dart';
 import 'package:payroll_app/features/auth/data/models/login_response.dart';
 import 'package:payroll_app/features/auth/domain/usecase/login.dart';
+import 'package:payroll_app/features/auth/domain/usecase/logout.dart';
+import 'package:payroll_app/features/auth/domain/usecase/refresh_token.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final Login _login;
-  // final Register _register;
-  // final FirebaseAnalytics _analytics;
-  // final SendOtp _sendOtp;
-  // final VerifOtp _verifOtp;
-  // final r.ResetPassword _resetPassword;
-  // final RefreshToken _refreshToken;
+  final AuthLogout _authLogout;
+  final RefreshToken _refreshToken;
   final AuthLocalDataSource _authLocalDataSource;
+
   AuthBloc({
     required Login login,
-    // required Register register,
-    // required SendOtp sendOtp,
-    // required VerifOtp verifOtp,
-    // required RefreshToken refreshToken,
-    // required r.ResetPassword resetPassword,
-    // FirebaseAnalytics? analytics,
+    required AuthLogout authLogout,
+    required RefreshToken refreshToken,
     required AuthLocalDataSource authLocalDataSource,
   }) : _login = login,
-       // _register = register,
-       // _sendOtp = sendOtp,
-       // _verifOtp = verifOtp,
-       // _resetPassword = resetPassword,
-       // _refreshToken = refreshToken,
-       // _analytics = analytics ?? FirebaseAnalytics.instance,
+       _authLogout = authLogout,
+       _refreshToken = refreshToken,
        _authLocalDataSource = authLocalDataSource,
        super(AuthInitial()) {
     on<OnLogin>(_onLogin);
-    // on<OnRegister>(_onRegister);
-    // on<AuthSendOtp>(_onAuthSendOtp);
-    // on<AuthVerifOtp>(_onAuthVerifOtp);
-    // on<OnResetPassword>(_onAuthResetPasswordOtp);
-    // on<OnRefreshToken>(_onRefreshToken);
+    on<OnAuthLogout>(_onAuthLogout);
+    on<OnRefreshToken>(_onRefreshToken);
+
+    // ✅ Setup auto-logout callback untuk ApiHelper
+    _setupAutoLogoutCallback();
+  }
+
+  // ✅ Setup callback ketika token refresh gagal (auto-logout)
+  void _setupAutoLogoutCallback() {
+    ApiHelper.onUnauthorized = () {
+      debugPrint('🔴 Token unauthorized - triggering auto-logout');
+      add(OnAuthLogout(LogoutReason.tokenExpired));
+    };
   }
 
   void _onLogin(OnLogin event, Emitter<AuthState> emit) async {
@@ -60,22 +59,33 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (r) async {
         final access = r.data?.accessToken;
         final refresh = r.data?.refreshToken;
+        final expiresIn = r.data?.expiresIn;
+
         if (access != null) {
           await _authLocalDataSource.updateAccessToken(access);
           await ApiHelper.setToken(access);
+          debugPrint('✅ Access token saved');
         }
 
         if (refresh != null) {
           await _authLocalDataSource.updateRefreshToken(refresh);
+          debugPrint('✅ Refresh token saved');
         }
-        // await _analytics.logEvent(
-        //   name: "login_success",
-        //   parameters: {
-        //     'email': r.data?.user?.email ?? '',
-        //     'role': r.data?.user?.role ?? '',
-        //     'login_method': 'manual',
-        //   },
-        // );
+
+        // ✅ FIX: Save token expiry from expiresIn (backend only returns expiresIn)
+        if (expiresIn != null && expiresIn > 0) {
+          await _authLocalDataSource.saveTokenExpiry(expiresIn);
+          debugPrint('✅ Token expiry saved: ${expiresIn}s (${(expiresIn/60).toStringAsFixed(1)} minutes)');
+          
+          // Verify it was saved correctly
+          final savedExpiry = await _authLocalDataSource.getTokenExpiry();
+          final expiryDateTime = savedExpiry != null 
+            ? DateTime.fromMillisecondsSinceEpoch(savedExpiry)
+            : null;
+          debugPrint('✅ Token expiry verification: $expiryDateTime');
+        } else {
+          debugPrint('⚠️ No expiresIn in response, token expiry not saved');
+        }
 
         emit(LoginSuccess(response: r));
       },
@@ -182,4 +192,84 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   //     },
   //   );
   // }
+
+  Future<void> _onRefreshToken(
+    OnRefreshToken event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(RefreshTokenLoading());
+
+    final refresh = await _authLocalDataSource.getRefreshToken();
+    if (refresh == null || refresh.isEmpty) {
+      emit(RefreshTokenFailure("Refresh token tidak ditemukan"));
+      return;
+    }
+
+    final result = await _refreshToken.call(
+      RefreshTokenParams(refreshToken: refresh),
+    );
+
+    result.fold(
+      (failure) async {
+        emit(RefreshTokenFailure(failure.message));
+
+        // Jika refresh token invalid, user harus logout
+        if (failure.message.contains("expired") ||
+            failure.message.contains("invalid") ||
+            failure.message.contains("unauthorized")) {
+          await _authLocalDataSource.deleteAll();
+          // ✅ Trigger logout otomatis
+          add(OnAuthLogout(LogoutReason.tokenExpired));
+        }
+      },
+      (success) async {
+        final newAccess = success.data?.accessToken;
+        final newRefresh = success.data?.refreshToken;
+        final expiresIn = success.data?.expiresIn;
+
+        if (newAccess != null && newAccess.isNotEmpty) {
+          await _authLocalDataSource.updateAccessToken(newAccess);
+          await ApiHelper.setToken(newAccess);
+          debugPrint('✅ Access token refreshed');
+        }
+
+        if (newRefresh != null && newRefresh.isNotEmpty) {
+          await _authLocalDataSource.updateRefreshToken(newRefresh);
+          debugPrint('✅ Refresh token updated');
+        }
+
+        // ✅ FIX: Save token expiry from expiresIn (backend only returns expiresIn)
+        if (expiresIn != null && expiresIn > 0) {
+          await _authLocalDataSource.saveTokenExpiry(expiresIn);
+          debugPrint('✅ Token expiry saved after refresh: ${expiresIn}s (${(expiresIn/60).toStringAsFixed(1)} minutes)');
+        } else {
+          debugPrint('⚠️ No expiresIn in refresh response');
+        }
+
+        emit(RefreshTokenSuccess(success));
+      },
+    );
+  }
+
+  void _onAuthLogout(OnAuthLogout event, Emitter emit) async {
+    emit(AuthLogoutLoading());
+
+    final refreshToken = await _authLocalDataSource.getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      // No refresh token — just clear local and succeed
+      await _authLocalDataSource.deleteAll();
+      emit(AuthLogoutSuccess('Logged out'));
+      return;
+    }
+
+    final response = await _authLogout.call(
+      AuthLogoutParams(refreshToken: refreshToken),
+    );
+
+    response.fold(
+      // Even on API failure, local tokens are already cleared in repository
+      (l) => emit(AuthLogoutSuccess('Logged out')),
+      (r) => emit(AuthLogoutSuccess(r)),
+    );
+  }
 }

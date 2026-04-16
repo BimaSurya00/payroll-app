@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
-import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -16,7 +15,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
@@ -57,7 +56,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                   const SizedBox(height: 24),
+                  const SizedBox(height: 24),
                   // Header
                   const Text(
                     'Create Account',
@@ -72,10 +71,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 12),
                   const Text(
                     'Sign up to get started',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: subtleTextColor,
-                    ),
+                    style: TextStyle(fontSize: 16, color: subtleTextColor),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -86,7 +82,10 @@ class _RegisterPageState extends State<RegisterPage> {
                     label: 'Full Name',
                     hint: 'Enter your full name',
                     keyboardType: TextInputType.name,
-                    prefixIcon: const Icon(Icons.person_outline_rounded, color: subtleTextColor),
+                    prefixIcon: const Icon(
+                      Icons.person_outline_rounded,
+                      color: subtleTextColor,
+                    ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your name';
@@ -102,12 +101,16 @@ class _RegisterPageState extends State<RegisterPage> {
                     label: 'Email Address',
                     hint: 'Enter your email',
                     keyboardType: TextInputType.emailAddress,
-                    prefixIcon: const Icon(Icons.email_outlined, color: subtleTextColor),
+                    prefixIcon: const Icon(
+                      Icons.email_outlined,
+                      color: subtleTextColor,
+                    ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!value.contains('@')) { // Simple check
+                      if (!value.contains('@')) {
+                        // Simple check
                         return 'Please enter a valid email';
                       }
                       return null;
@@ -121,10 +124,15 @@ class _RegisterPageState extends State<RegisterPage> {
                     label: 'Password',
                     hint: 'Enter your password',
                     obscureText: !_isPasswordVisible,
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: subtleTextColor),
+                    prefixIcon: const Icon(
+                      Icons.lock_outline_rounded,
+                      color: subtleTextColor,
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        _isPasswordVisible
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
                         color: subtleTextColor,
                       ),
                       onPressed: () {
@@ -151,15 +159,21 @@ class _RegisterPageState extends State<RegisterPage> {
                     label: 'Confirm Password',
                     hint: 'Re-enter your password',
                     obscureText: !_isConfirmPasswordVisible,
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: subtleTextColor),
+                    prefixIcon: const Icon(
+                      Icons.lock_outline_rounded,
+                      color: subtleTextColor,
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isConfirmPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        _isConfirmPasswordVisible
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
                         color: subtleTextColor,
                       ),
                       onPressed: () {
                         setState(() {
-                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                          _isConfirmPasswordVisible =
+                              !_isConfirmPasswordVisible;
                         });
                       },
                     ),
@@ -173,17 +187,14 @@ class _RegisterPageState extends State<RegisterPage> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 32),
 
                   // Register Button
-                  PrimaryButton(
-                    text: 'Sign Up',
-                    onPressed: _handleRegister,
-                  ),
+                  PrimaryButton(text: 'Sign Up', onPressed: _handleRegister),
 
                   const SizedBox(height: 24),
-                  
+
                   // Login Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
