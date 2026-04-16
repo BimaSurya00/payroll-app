@@ -23,6 +23,8 @@ abstract class LoginData with _$LoginData {
     @JsonKey(name: 'accessToken') String? accessToken,
     @JsonKey(name: 'refreshToken') String? refreshToken,
     @JsonKey(name: 'expiresIn') int? expiresIn,
+    @JsonKey(name: 'expiresAt')
+    int? expiresAt, // ✅ Add: Unix timestamp dari backend
   }) = _LoginData;
 
   factory LoginData.fromJson(Map<String, Object?> json) =>

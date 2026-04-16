@@ -3,7 +3,18 @@ import 'profile_info_item.dart';
 import '../../../../core/theme/app_pallete.dart';
 
 class ProfileInfoCard extends StatelessWidget {
-  const ProfileInfoCard({super.key});
+  final String? id;
+  final String? email;
+  final String? phone;
+  final String? address;
+
+  const ProfileInfoCard({
+    super.key,
+    this.id,
+    this.email,
+    this.phone,
+    this.address,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,10 +32,10 @@ class ProfileInfoCard extends StatelessWidget {
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Informasi Pribadi',
             style: TextStyle(
               fontSize: 18,
@@ -32,27 +43,27 @@ class ProfileInfoCard extends StatelessWidget {
               color: AppPallete.primaryBlue,
             ),
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           ProfileInfoItem(
             icon: Icons.badge_outlined,
             label: 'ID Pegawai',
-            value: '144856 344 8899',
+            value: id ?? 'N/A',
             showEdit: false,
           ),
           ProfileInfoItem(
             icon: Icons.email_outlined,
             label: 'Email',
-            value: 'lukmanhakim@gmail.com',
+            value: email ?? 'N/A',
           ),
           ProfileInfoItem(
             icon: Icons.phone_outlined,
             label: 'No. Telepon',
-            value: '089608780861',
+            value: phone ?? 'N/A',
           ),
           ProfileInfoItem(
             icon: Icons.location_on_outlined,
             label: 'Alamat',
-            value: 'Jalan durian Blok E-176, sinarsari, kab. Bogor, Jawa Barat',
+            value: address ?? 'N/A',
           ),
         ],
       ),

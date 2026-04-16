@@ -8,17 +8,20 @@ abstract class AuthRepository {
   // Future<Either<Failure, RegisterResponse>> register(
   //     {required RegisterRequest request});
 
-  Future<Either<Failure, String>> sendOtp({required String phone});
-  Future<Either<Failure, String>> verifOtp({
-    required String otp,
-    required String phone,
+  // Future<Either<Failure, String>> sendOtp({required String phone});
+  // Future<Either<Failure, String>> verifOtp({
+  //   required String otp,
+  //   required String phone,
+  // });
+
+  // Future<Either<Failure, String>> resetPassword({
+  //   required String phone,
+  //   required String otp,
+  //   required String password,
+  // });
+  Future<Either<Failure, LoginResponse>> refreshToken({
+    required String refreshToken,
   });
 
-  Future<Either<Failure, String>> resetPassword({
-    required String phone,
-    required String otp,
-    required String password,
-  });
-  Future<Either<Failure, LoginResponse>> refreshToken(
-      {required String refreshToken});
+  Future<Either<Failure, String>> logout({required String refreshToken});
 }

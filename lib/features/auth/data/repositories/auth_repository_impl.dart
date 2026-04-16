@@ -98,62 +98,83 @@ class AuthRepositoryImpl implements AuthRepository {
   //   }
   // }
 
-  @override
-  Future<Either<Failure, String>> sendOtp({required String phone}) async {
+  // @override
+  // Future<Either<Failure, String>> sendOtp({required String phone}) async {
+  //   if (!await connectionChecker.isConnected) {
+  //     return left(Failure(Constants.noConnectionMessage));
+  //   }
+
+  //   try {
+  //     final userData = await remoteDatasource.sendOtp(phone: phone);
+  //     // authLocalDataSource.saveToken(userData);
+  //     return right(userData);
+  //   } on ClientException catch (e) {
+  //     return left(Failure(e.message, e.errorDetails));
+  //   } on ServerException catch (e) {
+  //     return left(Failure(e.message, e.errorDetails));
+  //   } catch (e) {
+  //     return left(Failure('Error tidak diketahui'));
+  //   }
+  // }
+
+  // @override
+  // Future<Either<Failure, String>> verifOtp({
+  //   required String phone,
+  //   required String otp,
+  // }) async {
+  //   try {
+  //     final userData = await remoteDatasource.verifOtp(phone: phone, otp: otp);
+  //     // authLocalDataSource.saveToken(userData);
+  //     return right(userData);
+  //   } on ClientException catch (e) {
+  //     return left(Failure(e.message, e.errorDetails));
+  //   } on ServerException catch (e) {
+  //     return left(Failure(e.message, e.errorDetails));
+  //   } catch (e) {
+  //     return left(Failure('Error tidak diketahui'));
+  //   }
+  // }
+
+  // @override
+  // Future<Either<Failure, String>> resetPassword({
+  //   required String phone,
+  //   required String otp,
+  //   required String password,
+  // }) async {
+  //   try {
+  //     final userData = await remoteDatasource.resetPassword(
+  //       phone: phone,
+  //       password: password,
+  //       otp: otp,
+  //     );
+  //     // authLocalDataSource.saveToken(userData);
+  //     return right(userData);
+  //   } on ClientException catch (e) {
+  //     return left(Failure(e.message, e.errorDetails));
+  //   } on ServerException catch (e) {
+  //     return left(Failure(e.message, e.errorDetails));
+  //   } catch (e) {
+  //     return left(Failure('Error tidak diketahui'));
+  //   }
+  // }
+
+  Future<Either<Failure, String>> logout({required String refreshToken}) async {
     if (!await connectionChecker.isConnected) {
       return left(Failure(Constants.noConnectionMessage));
     }
-
     try {
-      final userData = await remoteDatasource.sendOtp(phone: phone);
-      // authLocalDataSource.saveToken(userData);
-      return right(userData);
+      final result = await remoteDatasource.logout(refreshToken: refreshToken);
+      await authLocalDataSource.deleteAll();
+      return right(result);
     } on ClientException catch (e) {
+      // Even if API fails, still clear local tokens
+      await authLocalDataSource.deleteAll();
       return left(Failure(e.message, e.errorDetails));
     } on ServerException catch (e) {
+      await authLocalDataSource.deleteAll();
       return left(Failure(e.message, e.errorDetails));
     } catch (e) {
-      return left(Failure('Error tidak diketahui'));
-    }
-  }
-
-  @override
-  Future<Either<Failure, String>> verifOtp({
-    required String phone,
-    required String otp,
-  }) async {
-    try {
-      final userData = await remoteDatasource.verifOtp(phone: phone, otp: otp);
-      // authLocalDataSource.saveToken(userData);
-      return right(userData);
-    } on ClientException catch (e) {
-      return left(Failure(e.message, e.errorDetails));
-    } on ServerException catch (e) {
-      return left(Failure(e.message, e.errorDetails));
-    } catch (e) {
-      return left(Failure('Error tidak diketahui'));
-    }
-  }
-
-  @override
-  Future<Either<Failure, String>> resetPassword({
-    required String phone,
-    required String otp,
-    required String password,
-  }) async {
-    try {
-      final userData = await remoteDatasource.resetPassword(
-        phone: phone,
-        password: password,
-        otp: otp,
-      );
-      // authLocalDataSource.saveToken(userData);
-      return right(userData);
-    } on ClientException catch (e) {
-      return left(Failure(e.message, e.errorDetails));
-    } on ServerException catch (e) {
-      return left(Failure(e.message, e.errorDetails));
-    } catch (e) {
+      await authLocalDataSource.deleteAll();
       return left(Failure('Error tidak diketahui'));
     }
   }

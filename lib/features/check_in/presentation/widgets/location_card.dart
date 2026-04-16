@@ -3,8 +3,15 @@ import '../../../../core/theme/app_pallete.dart';
 
 class LocationCard extends StatelessWidget {
   final String locationName;
+  final double distance; // in meters
+  final bool inRadius;
 
-  const LocationCard({super.key, required this.locationName});
+  const LocationCard({
+    super.key,
+    required this.locationName,
+    this.distance = 0.0,
+    this.inRadius = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -58,14 +65,50 @@ class LocationCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Dalam Radius Kantor',
-            style: TextStyle(
-              color: AppPallete.green,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: inRadius 
+                    ? AppPallete.green.withOpacity(0.1)
+                    : AppPallete.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      inRadius ? Icons.check_circle : Icons.cancel,
+                      color: inRadius ? AppPallete.green : AppPallete.red,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      inRadius ? 'Dalam Radius' : 'Luar Radius',
+                      style: TextStyle(
+                        color: inRadius ? AppPallete.green : AppPallete.red,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (distance > 0) ...[
+                const SizedBox(width: 8),
+                Text(
+                  '${distance.toStringAsFixed(1)}m',
+                  style: const TextStyle(
+                    color: AppPallete.textGrey,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),

@@ -2,7 +2,16 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_pallete.dart';
 
 class ProfileHeader extends StatelessWidget {
-  const ProfileHeader({super.key});
+  final String? name;
+  final String? role;
+  final String? profileImage;
+
+  const ProfileHeader({
+    super.key,
+    this.name,
+    this.role,
+    this.profileImage,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +34,11 @@ class ProfileHeader extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 3),
                 ),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 50,
-                  backgroundImage: AssetImage('images/profile.jpg'), // Ensure asset exists or use placeholder
+                  backgroundImage: profileImage != null
+                      ? NetworkImage(profileImage!)
+                      : const AssetImage('images/profile.jpg') as ImageProvider,
                 ),
               ),
               Positioned(
@@ -59,9 +70,9 @@ class ProfileHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                'Iqbal Prasetya',
-                style: TextStyle(
+              Text(
+                name ?? 'Guest',
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -83,9 +94,9 @@ class ProfileHeader extends StatelessWidget {
               children: [
                 const Icon(Icons.badge, color: Colors.white, size: 14),
                 const SizedBox(width: 6),
-                const Text(
-                  'Magang IT',
-                  style: TextStyle(
+                Text(
+                  role ?? 'User',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,

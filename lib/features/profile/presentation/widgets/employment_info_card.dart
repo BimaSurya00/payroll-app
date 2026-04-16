@@ -3,7 +3,20 @@ import 'profile_info_item.dart';
 import '../../../../core/theme/app_pallete.dart';
 
 class EmploymentInfoCard extends StatelessWidget {
-  const EmploymentInfoCard({super.key});
+  final String? position;
+  final String? division;
+  final String? joiningDate;
+  final String? employmentStatus;
+  final String? supervisor;
+
+  const EmploymentInfoCard({
+    super.key,
+    this.position,
+    this.division,
+    this.joiningDate,
+    this.employmentStatus,
+    this.supervisor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,10 +34,10 @@ class EmploymentInfoCard extends StatelessWidget {
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Informasi Pekerjaan',
             style: TextStyle(
               fontSize: 18,
@@ -32,35 +45,35 @@ class EmploymentInfoCard extends StatelessWidget {
               color: AppPallete.primaryBlue,
             ),
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           ProfileInfoItem(
             icon: Icons.work_outline,
             label: 'Posisi',
-            value: 'Senior Mobile Developer',
+            value: position ?? 'N/A',
             showEdit: false,
           ),
           ProfileInfoItem(
             icon: Icons.business_outlined,
             label: 'Divisi',
-            value: 'Information Technology',
+            value: division ?? 'N/A',
             showEdit: false,
           ),
           ProfileInfoItem(
             icon: Icons.calendar_today_outlined,
             label: 'Tanggal Bergabung',
-            value: '10 Januari 2022',
+            value: joiningDate ?? 'N/A',
             showEdit: false,
           ),
           ProfileInfoItem(
             icon: Icons.verified_user_outlined,
             label: 'Status Karyawan',
-            value: 'Tetap (Full-time)',
+            value: employmentStatus ?? 'N/A',
             showEdit: false,
           ),
           ProfileInfoItem(
             icon: Icons.person_outline,
             label: 'Atasan Langsung',
-            value: 'Budi Santoso',
+            value: supervisor ?? 'N/A',
             showEdit: false,
           ),
         ],
