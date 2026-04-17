@@ -25,6 +25,7 @@ class _CheckInPageState extends State<CheckInPage> {
 
   CompanyData? _companyData;
   LocationResult? _currentLocation;
+  String? _locationError;
   bool _isLoadingCompany = false;
   bool _isLoadingLocation = false;
 
@@ -87,9 +88,15 @@ class _CheckInPageState extends State<CheckInPage> {
 
     try {
       final result = await _locationService.getCurrentLocation();
-      setState(() => _currentLocation = result);
+      setState(() {
+        _currentLocation = result;
+        _locationError = result.isSuccess ? null : result.errorMessage;
+      });
     } catch (e) {
-      setState(() => _currentLocation = null);
+      setState(() {
+        _currentLocation = null;
+        _locationError = 'Gagal mendapatkan lokasi: ${e.toString()}';
+      });
     } finally {
       setState(() => _isLoadingLocation = false);
     }
@@ -641,6 +648,18 @@ class _CheckInPageState extends State<CheckInPage> {
               ),
             ),
             const SizedBox(height: 8),
+            if (_locationError != null && _locationError!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  _locationError!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppPallete.textGrey,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
             ElevatedButton.icon(
               onPressed: _getCurrentLocation,
               icon: const Icon(Icons.refresh, size: 16),
