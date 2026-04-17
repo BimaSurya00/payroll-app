@@ -3,7 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:quickalert/quickalert.dart';
 import '../../../../core/theme/app_pallete.dart';
 import '../../../../core/services/location_service.dart';
+import '../../../../core/usecase/usecase.dart';
+import '../../../../init_dependencies.dart';
 import '../../data/models/attendance_status.dart';
+import '../../../company/data/models/company_response.dart';
+import '../../../company/domain/usecases/get_current_company.dart';
 import '../bloc/attendance_bloc.dart';
 import '../widgets/check_in_header.dart';
 import '../widgets/location_card.dart';
@@ -16,44 +20,75 @@ class CheckInPage extends StatefulWidget {
 }
 
 class _CheckInPageState extends State<CheckInPage> {
-  // Office location (could be fetched from API/Schedule in the future)
-  static const double officeLat = -6.2088;
-  static const double officeLong = 106.8456;
-  
-  late final LocationService _locationService;
-  
-  // Location state
+  late final GetCurrentCompany _getCurrentCompany;
+  late LocationService _locationService;
+
+  CompanyData? _companyData;
   LocationResult? _currentLocation;
+  bool _isLoadingCompany = false;
   bool _isLoadingLocation = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize location service
-    _locationService = LocationService(
-      officeLat: officeLat,
-      officeLong: officeLong,
-      allowedRadiusInMeters: 100.0,
-    );
-    
-    // Load today's attendance status and get current location
+    _getCurrentCompany = serviceLocator<GetCurrentCompany>();
+
     Future.delayed(Duration.zero, () {
-      context.read<AttendanceBloc>().add(OnLoadPage());
-      _getCurrentLocation();
+      _fetchCompanyAndLoad();
     });
   }
 
-  /// Get current GPS location
+  Future<void> _fetchCompanyAndLoad() async {
+    await _fetchCompany();
+    context.read<AttendanceBloc>().add(OnLoadPage());
+    if (_companyData != null && _companyData!.hasOfficeLocation) {
+      _initLocationService();
+      await _getCurrentLocation();
+    }
+  }
+
+  Future<void> _fetchCompany() async {
+    setState(() => _isLoadingCompany = true);
+
+    final result = await _getCurrentCompany.call(NoParams());
+    result.fold(
+      (l) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal memuat data perusahaan: ${l.message}'),
+            ),
+          );
+        }
+      },
+      (company) {
+        setState(() => _companyData = company);
+      },
+    );
+
+    setState(() => _isLoadingCompany = false);
+  }
+
+  void _initLocationService() {
+    if (_companyData == null || !_companyData!.hasOfficeLocation) return;
+
+    _locationService = LocationService(
+      officeLat: _companyData!.officeLat!,
+      officeLong: _companyData!.officeLong!,
+      allowedRadiusInMeters: _companyData!.allowedRadiusMeters!.toDouble(),
+    );
+  }
+
   Future<void> _getCurrentLocation() async {
     if (_isLoadingLocation) return;
-    
+    if (_companyData == null || !_companyData!.hasOfficeLocation) return;
+
     setState(() => _isLoadingLocation = true);
-    
+
     try {
       final result = await _locationService.getCurrentLocation();
       setState(() => _currentLocation = result);
     } catch (e) {
-      // Keep existing location or set to null
       setState(() => _currentLocation = null);
     } finally {
       setState(() => _isLoadingLocation = false);
@@ -61,30 +96,31 @@ class _CheckInPageState extends State<CheckInPage> {
   }
 
   void _handleClockIn() async {
-    // Check if we have valid location
     if (_currentLocation == null || !_currentLocation!.isSuccess) {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.error,
         title: 'Lokasi Tidak Tersedia',
-        text: 'Tidak dapat mendapatkan lokasi GPS. Pastikan GPS aktif dan coba lagi.',
+        text:
+            'Tidak dapat mendapatkan lokasi GPS. Pastikan GPS aktif dan coba lagi.',
         confirmBtnColor: AppPallete.red,
       );
       return;
     }
 
+    final radius = _companyData?.allowedRadiusMeters ?? 100;
     if (_currentLocation!.isInOfficeRadius == false) {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.warning,
         title: 'Di Luar Jangkauan',
-        text: 'Anda berada di luar radius kantor (${_currentLocation!.distanceToOffice!.toStringAsFixed(0)}m). Maksimum radius adalah 100m.',
+        text:
+            'Anda berada di luar radius kantor (${_currentLocation!.distanceToOffice!.toStringAsFixed(0)}m). Maksimum radius adalah ${radius}m.',
         confirmBtnColor: Colors.orange,
       );
       return;
     }
 
-    // Use actual GPS location
     final lat = _currentLocation!.latitude!;
     final long = _currentLocation!.longitude!;
 
@@ -92,30 +128,31 @@ class _CheckInPageState extends State<CheckInPage> {
   }
 
   void _handleClockOut() async {
-    // Check if we have valid location
     if (_currentLocation == null || !_currentLocation!.isSuccess) {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.error,
         title: 'Lokasi Tidak Tersedia',
-        text: 'Tidak dapat mendapatkan lokasi GPS. Pastikan GPS aktif dan coba lagi.',
+        text:
+            'Tidak dapat mendapatkan lokasi GPS. Pastikan GPS aktif dan coba lagi.',
         confirmBtnColor: AppPallete.red,
       );
       return;
     }
 
+    final radius = _companyData?.allowedRadiusMeters ?? 100;
     if (_currentLocation!.isInOfficeRadius == false) {
       QuickAlert.show(
         context: context,
         type: QuickAlertType.warning,
         title: 'Di Luar Jangkauan',
-        text: 'Anda berada di luar radius kantor (${_currentLocation!.distanceToOffice!.toStringAsFixed(0)}m). Maksimum radius adalah 100m.',
+        text:
+            'Anda berada di luar radius kantor (${_currentLocation!.distanceToOffice!.toStringAsFixed(0)}m). Maksimum radius adalah ${radius}m.',
         confirmBtnColor: Colors.orange,
       );
       return;
     }
 
-    // Use actual GPS location
     final lat = _currentLocation!.latitude!;
     final long = _currentLocation!.longitude!;
 
@@ -125,27 +162,94 @@ class _CheckInPageState extends State<CheckInPage> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    
-    // Format time manually
-    final timeString = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    
-    // Format date manually for Indonesian locale
+
+    final timeString =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
     const months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     const days = [
-      'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu',
     ];
     final dayName = days[now.weekday - 1];
     final monthName = months[now.month - 1];
     final dateString = '$dayName, ${now.day} $monthName ${now.year}';
 
+    if (_isLoadingCompany) {
+      return Scaffold(
+        backgroundColor: AppPallete.backgroundGrey,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_companyData == null || !_companyData!.hasOfficeLocation) {
+      return Scaffold(
+        backgroundColor: AppPallete.backgroundGrey,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.business,
+                  size: 64,
+                  color: AppPallete.textGrey,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Lokasi Kantor Belum Diatur',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppPallete.textBlack,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Admin perusahaan belum mengatur lokasi kantor. Hubungi admin untuk mengatur lokasi kantor terlebih dahulu.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppPallete.textGrey, fontSize: 14),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: _fetchCompanyAndLoad,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Coba Lagi'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppPallete.primaryBlue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppPallete.backgroundGrey,
       body: BlocListener<AttendanceBloc, AttendanceState>(
         listener: (context, state) {
-          // Handle clock-in success
           if (state is ClockInSuccess) {
             QuickAlert.show(
               context: context,
@@ -154,13 +258,11 @@ class _CheckInPageState extends State<CheckInPage> {
               text: state.response.message ?? 'Anda berhasil clock-in',
               onConfirmBtnTap: () {
                 Navigator.of(context).pop();
-                // Refresh status
                 context.read<AttendanceBloc>().add(OnLoadPage());
               },
             );
           }
 
-          // Handle clock-in failure
           if (state is ClockInFailure) {
             QuickAlert.show(
               context: context,
@@ -171,7 +273,6 @@ class _CheckInPageState extends State<CheckInPage> {
             );
           }
 
-          // Handle clock-out success
           if (state is ClockOutSuccess) {
             QuickAlert.show(
               context: context,
@@ -180,13 +281,11 @@ class _CheckInPageState extends State<CheckInPage> {
               text: state.response.message ?? 'Anda berhasil clock-out',
               onConfirmBtnTap: () {
                 Navigator.of(context).pop();
-                // Refresh status
                 context.read<AttendanceBloc>().add(OnLoadPage());
               },
             );
           }
 
-          // Handle clock-out failure
           if (state is ClockOutFailure) {
             QuickAlert.show(
               context: context,
@@ -199,17 +298,13 @@ class _CheckInPageState extends State<CheckInPage> {
         },
         child: BlocBuilder<AttendanceBloc, AttendanceState>(
           builder: (context, state) {
-            // Show loading indicator
             if (state is ClockInLoading || state is ClockOutLoading) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
+              return const Center(child: CircularProgressIndicator());
             }
 
             return SingleChildScrollView(
               child: Column(
                 children: [
-                  // Header Background with Content
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.only(bottom: 40),
@@ -237,7 +332,6 @@ class _CheckInPageState extends State<CheckInPage> {
                     ),
                   ),
 
-                  // Location Card
                   Transform.translate(
                     offset: const Offset(0, -30),
                     child: Padding(
@@ -248,7 +342,6 @@ class _CheckInPageState extends State<CheckInPage> {
 
                   const SizedBox(height: 20),
 
-                  // Attendance Status Card
                   if (state is StatusLoaded)
                     Transform.translate(
                       offset: const Offset(0, -20),
@@ -260,7 +353,6 @@ class _CheckInPageState extends State<CheckInPage> {
 
                   const SizedBox(height: 20),
 
-                  // Dual Action Buttons
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Row(
@@ -292,22 +384,24 @@ class _CheckInPageState extends State<CheckInPage> {
 
                   const SizedBox(height: 30),
 
-                  // Location refresh button
                   if (_currentLocation != null && _currentLocation!.isSuccess)
                     InkWell(
                       onTap: _isLoadingLocation ? null : _getCurrentLocation,
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color: _isLoadingLocation 
-                            ? Colors.grey[200] 
-                            : AppPallete.primaryBlue.withOpacity(0.1),
+                          color: _isLoadingLocation
+                              ? Colors.grey[200]
+                              : AppPallete.primaryBlue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: _isLoadingLocation 
-                              ? Colors.grey[300]! 
-                              : AppPallete.primaryBlue,
+                            color: _isLoadingLocation
+                                ? Colors.grey[300]!
+                                : AppPallete.primaryBlue,
                             width: 1,
                           ),
                         ),
@@ -315,23 +409,23 @@ class _CheckInPageState extends State<CheckInPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              _isLoadingLocation 
-                                ? Icons.hourglass_empty 
-                                : Icons.refresh,
+                              _isLoadingLocation
+                                  ? Icons.hourglass_empty
+                                  : Icons.refresh,
                               size: 16,
-                              color: _isLoadingLocation 
-                                ? Colors.grey 
-                                : AppPallete.primaryBlue,
+                              color: _isLoadingLocation
+                                  ? Colors.grey
+                                  : AppPallete.primaryBlue,
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              _isLoadingLocation 
-                                ? 'Memperbarui lokasi...' 
-                                : 'Perbarui Lokasi',
+                              _isLoadingLocation
+                                  ? 'Memperbarui lokasi...'
+                                  : 'Perbarui Lokasi',
                               style: TextStyle(
-                                color: _isLoadingLocation 
-                                  ? Colors.grey 
-                                  : AppPallete.primaryBlue,
+                                color: _isLoadingLocation
+                                    ? Colors.grey
+                                    : AppPallete.primaryBlue,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -342,7 +436,6 @@ class _CheckInPageState extends State<CheckInPage> {
                     ),
 
                   const SizedBox(height: 20),
-
                   const Text(
                     'Pastikan lokasi anda sesuai saat melakukan absen',
                     textAlign: TextAlign.center,
@@ -363,13 +456,13 @@ class _CheckInPageState extends State<CheckInPage> {
     Color statusColor = AppPallete.textGrey;
 
     if (status.hasClockedOut == true) {
-      statusText = '✅ Sudah Clock-Out: ${status.clockOutTime ?? ''}';
+      statusText = 'Sudah Clock-Out: ${status.clockOutTime ?? ''}';
       statusColor = AppPallete.green;
     } else if (status.hasClockedIn == true) {
-      statusText = '✅ Sudah Clock-In: ${status.clockInTime ?? ''}';
+      statusText = 'Sudah Clock-In: ${status.clockInTime ?? ''}';
       statusColor = AppPallete.primaryBlue;
     } else {
-      statusText = '⏰ Belum Clock-In hari ini';
+      statusText = 'Belum Clock-In hari ini';
       statusColor = AppPallete.textGrey;
     }
 
@@ -389,7 +482,9 @@ class _CheckInPageState extends State<CheckInPage> {
       child: Row(
         children: [
           Icon(
-            status.hasClockedIn == true ? Icons.check_circle : Icons.access_time,
+            status.hasClockedIn == true
+                ? Icons.check_circle
+                : Icons.access_time,
             color: statusColor,
             size: 24,
           ),
@@ -411,13 +506,11 @@ class _CheckInPageState extends State<CheckInPage> {
 
   bool _canClockIn(AttendanceState state) {
     if (state is! StatusLoaded) return true;
-    // Can clock in if haven't clocked in today
     return state.status.hasClockedIn != true;
   }
 
   bool _canClockOut(AttendanceState state) {
     if (state is! StatusLoaded) return false;
-    // Can clock out if have clocked in but haven't clocked out
     return state.status.hasClockedIn == true &&
         state.status.hasClockedOut != true;
   }
@@ -476,7 +569,6 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
-  /// Build location card with real GPS data
   Widget _buildLocationCard() {
     if (_isLoadingLocation) {
       return Container(
@@ -500,10 +592,7 @@ class _CheckInPageState extends State<CheckInPage> {
               SizedBox(height: 12),
               Text(
                 'Mendapatkan lokasi...',
-                style: TextStyle(
-                  color: AppPallete.textGrey,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: AppPallete.textGrey, fontSize: 14),
               ),
             ],
           ),

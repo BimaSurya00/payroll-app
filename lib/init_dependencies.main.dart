@@ -6,6 +6,7 @@ final _dio = Dio(BaseOptions(connectTimeout: Duration(seconds: 15)));
 Future<void> initDependencies() async {
   _initAuth();
   _initAttendance();
+  _initCompany();
 
   final sharedPreferences = await SharedPreferences.getInstance();
 
@@ -122,5 +123,21 @@ void _initAttendance() {
         getAttendanceStatus: serviceLocator(),
         getAttendanceHistory: serviceLocator(),
       ),
+    );
+}
+
+void _initCompany() {
+  serviceLocator
+    ..registerFactory<CompanyRemoteDataSource>(
+      () => CompanyRemoteDataSourceImpl(),
+    )
+    ..registerFactory<CompanyRepository>(
+      () => CompanyRepositoryImpl(
+        remoteDataSource: serviceLocator(),
+        connectionChecker: serviceLocator(),
+      ),
+    )
+    ..registerFactory<GetCurrentCompany>(
+      () => GetCurrentCompany(serviceLocator()),
     );
 }
