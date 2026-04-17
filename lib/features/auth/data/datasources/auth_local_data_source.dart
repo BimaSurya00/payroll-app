@@ -122,45 +122,13 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   Future<bool> isTokenExpired() async {
     final expiry = await getTokenExpiry();
     if (expiry == null) {
-      debugPrint(
-        '⚠️ TOKEN EXPIRY NULL - returning false to skip proactive refresh',
-      );
-      return false; // ✅ FIX: Return false instead of true to avoid unnecessary refresh
+      return false;
     }
 
     final now = DateTime.now().millisecondsSinceEpoch;
     final timeUntilExpiry = expiry - now;
     final minutesLeft = timeUntilExpiry / 60000;
 
-    debugPrint('🕐 Token expiry check:');
-    debugPrint(
-      '   Current time: $now ms (${DateTime.fromMillisecondsSinceEpoch(now)})',
-    );
-    debugPrint(
-      '   Expiry time: $expiry ms (${DateTime.fromMillisecondsSinceEpoch(expiry)})',
-    );
-    debugPrint(
-      '   Time until expiry: ${(timeUntilExpiry / 1000).toStringAsFixed(0)}s = ${minutesLeft.toStringAsFixed(2)}min',
-    );
-
-    // SAFETY CHECK: If token duration is unusually short (<5 min),
-    // might indicate server time sync issue - skip proactive refresh
-    if (minutesLeft < 5) {
-      debugPrint(
-        '   ⚠️ SAFETY: Token duration very short - might be server sync issue',
-      );
-      debugPrint(
-        '   Skipping proactive refresh, will use reactive 401 instead',
-      );
-      return false;
-    }
-
-    // Normal case: trigger proactive refresh only if <1 minute left
-    final shouldRefresh = minutesLeft < 1.0;
-    debugPrint(
-      '   Result: shouldRefresh = $shouldRefresh (minutesLeft=$minutesLeft)',
-    );
-
-    return shouldRefresh;
+    return minutesLeft < 2.0;
   }
 }

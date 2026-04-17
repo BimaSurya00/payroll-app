@@ -277,6 +277,10 @@ class _CheckInPageState extends State<CheckInPage> {
               title: 'Clock-In Gagal',
               text: state.message,
               confirmBtnColor: AppPallete.red,
+              onConfirmBtnTap: () {
+                Navigator.of(context).pop();
+                context.read<AttendanceBloc>().add(OnLoadPage());
+              },
             );
           }
 
@@ -300,6 +304,10 @@ class _CheckInPageState extends State<CheckInPage> {
               title: 'Clock-Out Gagal',
               text: state.message,
               confirmBtnColor: AppPallete.red,
+              onConfirmBtnTap: () {
+                Navigator.of(context).pop();
+                context.read<AttendanceBloc>().add(OnLoadPage());
+              },
             );
           }
         },

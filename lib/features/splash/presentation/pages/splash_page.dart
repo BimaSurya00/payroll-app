@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:payroll_app/core/api/api_helper.dart';
 import 'package:payroll_app/features/auth/data/datasources/auth_local_data_source.dart';
 import 'package:payroll_app/features/home/presentation/pages/main_page.dart';
 import '../../../../features/auth/presentation/pages/login_page.dart';
@@ -67,24 +68,37 @@ class _SplashPageState extends State<SplashPage>
       final accessToken = await authLocalDataSource.getAccessToken();
       final refreshToken = await authLocalDataSource.getRefreshToken();
 
-      if (mounted) {
-        // If both tokens exist, go to home
-        if (accessToken != null &&
-            accessToken.isNotEmpty &&
-            refreshToken != null &&
-            refreshToken.isNotEmpty) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const MainPage()),
-          );
-        } else {
-          // No tokens, go to login
+      if (accessToken == null ||
+          accessToken.isEmpty ||
+          refreshToken == null ||
+          refreshToken.isEmpty) {
+        if (mounted) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const LoginPage()),
           );
         }
+        return;
+      }
+
+      final isExpired = await authLocalDataSource.isTokenExpired();
+      if (isExpired) {
+        final result = await ApiHelper.refreshAccessToken(refreshToken);
+        if (result == null) {
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const LoginPage()),
+            );
+          }
+          return;
+        }
+      }
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainPage()),
+        );
       }
     } catch (e) {
-      // On error, go to login
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const LoginPage()),

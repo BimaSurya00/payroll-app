@@ -59,32 +59,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (r) async {
         final access = r.data?.accessToken;
         final refresh = r.data?.refreshToken;
-        final expiresIn = r.data?.expiresIn;
+        final expiresAt = r.data?.expiresAt;
 
         if (access != null) {
           await _authLocalDataSource.updateAccessToken(access);
           await ApiHelper.setToken(access);
-          debugPrint('✅ Access token saved');
         }
 
         if (refresh != null) {
           await _authLocalDataSource.updateRefreshToken(refresh);
-          debugPrint('✅ Refresh token saved');
         }
 
-        // ✅ FIX: Save token expiry from expiresIn (backend only returns expiresIn)
-        if (expiresIn != null && expiresIn > 0) {
-          await _authLocalDataSource.saveTokenExpiry(expiresIn);
-          debugPrint('✅ Token expiry saved: ${expiresIn}s (${(expiresIn/60).toStringAsFixed(1)} minutes)');
-          
-          // Verify it was saved correctly
-          final savedExpiry = await _authLocalDataSource.getTokenExpiry();
-          final expiryDateTime = savedExpiry != null 
-            ? DateTime.fromMillisecondsSinceEpoch(savedExpiry)
-            : null;
-          debugPrint('✅ Token expiry verification: $expiryDateTime');
-        } else {
-          debugPrint('⚠️ No expiresIn in response, token expiry not saved');
+        if (expiresAt != null && expiresAt > 0) {
+          await _authLocalDataSource.saveTokenExpiryFromTimestamp(expiresAt);
         }
 
         emit(LoginSuccess(response: r));
@@ -225,25 +212,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (success) async {
         final newAccess = success.data?.accessToken;
         final newRefresh = success.data?.refreshToken;
-        final expiresIn = success.data?.expiresIn;
+        final expiresAt = success.data?.expiresAt;
 
         if (newAccess != null && newAccess.isNotEmpty) {
           await _authLocalDataSource.updateAccessToken(newAccess);
           await ApiHelper.setToken(newAccess);
-          debugPrint('✅ Access token refreshed');
         }
 
         if (newRefresh != null && newRefresh.isNotEmpty) {
           await _authLocalDataSource.updateRefreshToken(newRefresh);
-          debugPrint('✅ Refresh token updated');
         }
 
-        // ✅ FIX: Save token expiry from expiresIn (backend only returns expiresIn)
-        if (expiresIn != null && expiresIn > 0) {
-          await _authLocalDataSource.saveTokenExpiry(expiresIn);
-          debugPrint('✅ Token expiry saved after refresh: ${expiresIn}s (${(expiresIn/60).toStringAsFixed(1)} minutes)');
-        } else {
-          debugPrint('⚠️ No expiresIn in refresh response');
+        if (expiresAt != null && expiresAt > 0) {
+          await _authLocalDataSource.saveTokenExpiryFromTimestamp(expiresAt);
         }
 
         emit(RefreshTokenSuccess(success));

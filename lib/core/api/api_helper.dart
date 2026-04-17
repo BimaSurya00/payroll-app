@@ -374,35 +374,23 @@ class ApiHelper {
 
       final newAccess = tokenContainer['accessToken'] as String?;
       final newRefresh = tokenContainer['refreshToken'] as String?;
-      final expiresIn = tokenContainer['expiresIn'] as int?;
+      final expiresAt = tokenContainer['expiresAt'] as int?;
 
       if (newAccess == null || newAccess.isEmpty) {
-        debugPrint('❌ Refresh failed: no access token in response');
         return null;
       }
 
-      // Save new tokens
       await _authLocalDataSource.updateAccessToken(newAccess);
 
       if (newRefresh != null && newRefresh.isNotEmpty) {
         await _authLocalDataSource.updateRefreshToken(newRefresh);
       }
 
-      // ✅ FIX: Save token expiry from expiresIn (backend only returns expiresIn)
-      if (expiresIn != null && expiresIn > 0) {
-        await _authLocalDataSource.saveTokenExpiry(expiresIn);
-        debugPrint(
-          '✅ Token expiry updated: ${expiresIn}s (${(expiresIn / 60).toStringAsFixed(1)} minutes)',
-        );
+      if (expiresAt != null && expiresAt > 0) {
+        await _authLocalDataSource.saveTokenExpiryFromTimestamp(expiresAt);
       }
 
-      debugPrint('✅ Token refreshed successfully');
-
-      return {
-        'accessToken': newAccess,
-        'refreshToken': newRefresh,
-        'expiresIn': expiresIn,
-      };
+      return {'accessToken': newAccess, 'refreshToken': newRefresh};
     } catch (e) {
       debugPrint('❌ Refresh token failed: $e');
       return null;
